@@ -27,7 +27,7 @@ ok this one is trick. So basically if your filename is just a hyphen `-`, you us
 ## L3 
 Use backslash to escape. MNk8KNH3Usiio41PRUEoDFPqfxLPlSmx
 
-## L4
+## L4 Hidden Files
 File is hidden. Use `ls -a`. 2WmrDFRmJIq3IPxneAaMGhap0pFhF3NJ
 
 ## L5
@@ -37,7 +37,7 @@ File is hidden. Use `ls -a`. 2WmrDFRmJIq3IPxneAaMGhap0pFhF3NJ
 bandit4@bandit:~$ cat inhere/-file07
 4oQYVPkxZOOEOO5pTW81FB8j8lxXGUQw
 ```
-## L6
+## L6 `find  your/path/ -type f -exec COMMAND {} +`
 The simplest way to output all pipeline-able filenames plus their paths, is `find .`
 
 > [!tip]
@@ -90,7 +90,7 @@ bandit7@bandit:~$ cat data.txt | grep millionth
 millionth	dfwvzFQi4mU0wfNbFOe9RoWskMLg7eEc
 ```
 
-## L9
+## L9 `sort | uniq -u`
 > [!tip]
 > `uniq` must be used together with `sort` first, as it detects repeated lines only if they are adjacent.
 
@@ -126,7 +126,7 @@ bandit8@bandit:~$ cat data.txt | sort | uniq -u
 4CKMh1JI91bUIZZPXDqGanal4xvAg0JM
 ```
 
-## L10
+## L10 `strings` and Printing Binaries
 > [!tip] `strings` 
 > ⚠️ plural form
 > `strings` Find printable strings in an object file or binary. 
@@ -173,13 +173,13 @@ g+;Y
 D9========== FGUW5ilLVJrxX9kMYMmlN4MgbpfMiqey
 ```
 
-## L11
+## L11 base64
 ```sh
 bandit10@bandit:~$ cat data.txt | base64 -d
 The password is dtR173fZKb0RRsDFSGsg2RWnpNVj3qRr
 ```
 
-## L12
+## L12 `tr` & ROT13
 > [!tip]
 > First have a look at:
 > 1. ROT13 https://en.wikipedia.org/wiki/ROT13

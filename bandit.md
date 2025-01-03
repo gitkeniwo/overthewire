@@ -7,6 +7,21 @@ ssh login template:
 ssh bandit@bandit.labs.overthewire.org -p 2220
 ```
 
+- [Bandit](#bandit)
+  - [L0](#l0)
+  - [L1](#l1)
+  - [L2](#l2)
+  - [L3](#l3)
+  - [L4 Hidden Files](#l4-hidden-files)
+  - [L5](#l5)
+  - [L6 `find  your/path/ -type f -exec COMMAND {} +`](#l6-find--yourpath--type-f--exec-command--)
+  - [L7](#l7)
+  - [L8](#l8)
+  - [L9 `sort | uniq -u`](#l9-sort--uniq--u)
+  - [L10 `strings` and Printing Binaries](#l10-strings-and-printing-binaries)
+  - [L11 base64](#l11-base64)
+  - [L12 `tr` \& ROT13](#l12-tr--rot13)
+
 ## L0
 `ssh bandit0@bandit.labs.overthewire.org -p 2220`
 

@@ -21,6 +21,11 @@ ssh bandit@bandit.labs.overthewire.org -p 2220
   - [L10 `strings` and Printing Binaries](#l10-strings-and-printing-binaries)
   - [L11 base64](#l11-base64)
   - [L12 `tr` \& ROT13](#l12-tr--rot13)
+  - [L13 Hexdump, xxd](#l13-hexdump-xxd)
+  - [L14 ssh key: `ssh -i your_key`](#l14-ssh-key-ssh--i-your_key)
+  - [L15 Telnet](#l15-telnet)
+  - [L16 SSL/TLS](#l16-ssltls)
+  - [L17 Port Scanning](#l17-port-scanning)
 
 ## L0
 `ssh bandit0@bandit.labs.overthewire.org -p 2220`
@@ -142,7 +147,8 @@ bandit8@bandit:~$ cat data.txt | sort | uniq -u
 ```
 
 ## L10 `strings` and Printing Binaries
-> [!tip] `strings` 
+> [!tip] 
+> `strings`
 > ⚠️ plural form
 > `strings` Find printable strings in an object file or binary. 
 > Specifically, it prints sequences of printable characters. Its main use is for non-printable files like hex dumps or executables.
@@ -204,3 +210,106 @@ The password is dtR173fZKb0RRsDFSGsg2RWnpNVj3qRr
 bandit11@bandit:~$ cat data.txt | tr 'A-Za-z' 'N-ZA-Mn-za-m'
 The password is 7x16WNeHIi5YkIhWsfFIqoognUTyj9Q4
 ```
+
+## L13 Hexdump, xxd
+
+> [!tip] 
+> `hexdump` and `xxd`:
+> 
+> `hexdump` is the basic util. `xxd` could revert a hexdump to plaintext with `-r -p`.
+> 
+> Revert a plaintext hexdump back into binary, and save it as a binary file:
+>   `xxd -r -p input_file output_file`
+> 
+> **Magic Number**: https://en.wikipedia.org/wiki/Magic_number_(programming)
+> A constant numerical or text value used to identify a file format or protocol (for files, see List of file signatures)
+> Can be verified with `xxd -l 16 -g 1 filename`
+
+⚠️ Take notice of `-p` flag with `xxd`. If you just want to revert it, use only `-r` as `-p` will add 4 extra hex digits.
+```sh
+# Wrongly used -p flag
+bandit12@bandit:/tmp/tmp.n2pYbOTEI5$ xxd -r -p data.txt output
+bandit12@bandit:/tmp/tmp.n2pYbOTEI5$ xxd -l 16 -g 1 output.gz 
+# -l: Display output only up to a length of 16 bytes; -g: Separate the output of every <bytes> bytes
+00000000: 00 00 00 00 1f 8b 08 08 df cd eb 66 02 03 64 61  ...........f..da
+bandit12@bandit:/tmp/tmp.n2pYbOTEI5$ gunzip output.gz
+gzip: output.gz: not in gzip format
+
+# Correct
+bandit12@bandit:/tmp/tmp.n2pYbOTEI5$ xxd -r data.txt output
+bandit12@bandit:/tmp/tmp.n2pYbOTEI5$ xxd -l 16 -g 1 output
+00000000: 1f 8b 08 08 df cd eb 66 02 03 64 61 74 61 32 2e  .......f..data2
+bandit12@bandit:/tmp/tmp.n2pYbOTEI5$ file output
+output: gzip compressed data, was "data2.bin", last modified: Thu Sep 19 07:08:15 2024, max compression, from Unix, original size modulo 2^32 3154116610
+```
+In this case, `.gz` (gzip file)'s magic number is `1f 8b`. 
+In the first try, `-p` actually prepended four `00` to the output, causing `gunzip` to not work.
+
+> [!tip] 
+> **Compression**
+> `.tar.gz` is the defacto archive & compression standard in CLI.
+> - Creating a Tar.gz Archive
+>   - `tar -czvf archive_name.tar.gz file1 file2 directory1`
+> - Extracting a Tar.gz Archive
+>   - `tar -xvzf archive_name.tar.gz`
+
+Reference:
+```
+-c      Create a new archive containing the specified items.  The long option form is --create.
+-f file, --file file
+        Read the archive from or write the archive to the specified file.  The filename can be - for standard input or standard output.  The default
+        varies by system; on FreeBSD, the default is /dev/sa0; on Linux, the default is /dev/st0.
+-v, --verbose
+        Produce verbose output.  In create and extract modes, tar will list each file name as it is read from or written to the archive.  In list mode,
+        tar will produce output similar to that of ls(1).  An additional -v option will also provide ls-like details in create and extract mode.
+-x      Extract to disk from the archive.  If a file with the same name appears more than once in the archive, each copy will be extracted, with later
+        copies overwriting (replacing) earlier copies.  The long option form is --extract.
+-z, --gunzip, --gzip
+        (c mode only) Compress the resulting archive with gzip(1).  In extract or list modes, this option is ignored.  Note that this tar implementation
+        recognizes gzip compression automatically when reading archives.
+```
+
+After reverting hexdump with `xxd -r`, it is a bunch of very painful decompression and unarchiving with `bzip2 -d`, `gunzip -v`, and `tar xvf`.
+
+```sh
+bandit12@bandit:/tmp/tmp.n2pYbOTEI5$ cat finally
+The password is FO5dwFsc0cbaIiH0h8J2eUks2vdTDwAn
+```
+
+## L14 ssh key: `ssh -i your_key`
+```powershell
+bandit13@bandit:~$ ssh -i sshkey.private bandit14@bandit.labs.overthewire.org -p 2220
+bandit14@bandit:~$ cat /etc/bandit_pass/bandit14
+MU4VWeTyJk8ROof1qqmcBPaLh7lDCPvS
+```
+
+## L15 Telnet
+
+> [!tip]
+> Simply put, Telnet is a lesser version of ssh. Transmission of data are in plaintext (unencrypted). 
+> Does not support key authentication or secured file transfer. 
+> Port is 23 by default. 
+
+```powershell
+bandit14@bandit:~$ telnet localhost 30000
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+MU4VWeTyJk8ROof1qqmcBPaLh7lDCPvS
+Correct!
+8xCjnmgoKbGLhHFAZlGE5Tmu4M2tKJQo
+```
+
+> [!tip]
+> `nc` or netcat. TCP/UDP工具，构建简单的TCP/HTTP服务，网络守护进程测试 etc.
+> - Handles TCP and UDP connections. 
+> - It can open TCP connections, send UDP packets, listen on arbitrary TCP and UDP ports, do port scanning, and deal with both IPv4 and IPv6.  
+> - Unlike telnet(1), nc scripts nicely, and separates error messages onto standard error instead of sending them to standard output, as telnet(1) does with some.
+
+## L16 SSL/TLS
+
+
+## L17 Port Scanning
+
+`nmap <ip>` carries out a basic port scanning process.
+

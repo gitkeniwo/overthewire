@@ -27,6 +27,8 @@ ssh bandit@bandit.labs.overthewire.org -p 2220
   - [L16 SSL/TLS](#l16-ssltls)
   - [L17 Port Scanning](#l17-port-scanning)
   - [L18 diff](#l18-diff)
+  - [L19 ssh \[cmd\]](#l19-ssh-cmd)
+  - [L20 setuid](#l20-setuid)
 
 ## L0
 `ssh bandit0@bandit.labs.overthewire.org -p 2220`
@@ -362,7 +364,7 @@ closed
 `nmap <ip>` carries out a basic port scanning process.
 
 > [!important]
-> `nmap <ip>` by default does not do a full scan. It only scans the most well-known hosts and ports that aren't on that list is omitted.
+> `nmap <ip>` by default does not do a full scan. It only scans the most well-known hosts, and ports that aren't on that list are omitted.
 > To do a full scan, use `nmap -p 1-65535` or `nmap -p-`. [source](https://unix.stackexchange.com/questions/238640/nmap-doesnt-appear-to-list-all-open-ports)
 
 It is also adviced to enable `service detection` with `-sv`
@@ -513,4 +515,170 @@ vBgsyi/sN3RqRBcGU40fOoZyfAMT8s1m/uYv52O6IgeuZ/ujbjY=
 closed
 ```
 
+ssh requires your private key to be in mode `600` or `.rw-------`. Use `chmod 600 .ssh/your-key` before connection.
+
 ## L18 diff
+Use `ssh -i path/to/your_key` to log in.
+
+> [!tip]
+> When comparing using `diff`, the old file always comes first in positional arguments.
+> Use `-u` flag to output in a git-like format.
+
+```
+bandit17@bandit:~$ diff -u passwords.old  passwords.new
+--- passwords.old       2024-09-19 07:08:22.603693566 +0000
++++ passwords.new       2024-09-19 07:08:22.608693607 +0000
+@@ -39,7 +39,7 @@
+ Udq1Zw8oOdLjcLZSoWFb3XVsLVr2J7e7
+ fwJjyJfLsqI7eA3q1pmW0WjptEJPyjVj
+ 9jbIrrT9OlPADZDBfF1UOoz4lhboOnsT
+-ktfgBvpMzWKR5ENj26IbLGSblgUG9CzB
++x2gLTTjFwMOhQ8oWNbMN362QKxfRqGlO
+ dX464MV2LHPWYN9RDa7AnVBqsxjl1zui
+ GOTGHQIZKu2qwhUTibu5PQaMEMWvoUDR
+ t7szZtdGClutCs1g4uWKN5I1oV3cnA0c
+ ```
+ 
+## L19 ssh [cmd]
+
+Provide the ssh command with customized commands so that it skips login shell.
+
+```md
+SSH(1)                                                   General Commands Manual                                                   SSH(1)
+
+NAME
+     ssh – OpenSSH remote login client
+
+SYNOPSIS
+     ssh [-46AaCfGgKkMNnqsTtVvXxYy] [-B bind_interface] [-b bind_address] [-c cipher_spec] [-D [bind_address:]port] [-E log_file]
+         [-e escape_char] [-F configfile] [-I pkcs11] [-i identity_file] [-J destination] [-L address] [-l login_name] [-m mac_spec]
+         [-O ctl_cmd] [-o option] [-P tag] [-p port] [-R address] [-S ctl_path] [-W host:port] [-w local_tun[:remote_tun]] destination
+         [command [argument ...]]
+     ssh [-Q query_option]
+
+DESCRIPTION
+     ...
+
+     **If a command is specified, it will be executed on the remote host instead of a login shell.  A complete command line may be
+     specified as command, or it may have additional arguments.  If supplied, the arguments will be appended to the command, separated by
+     spaces, before it is sent to the server to be executed.**
+```
+
+In our case, simply ask it to print out the results
+```
+└───◎ ssh bandit18@bandit.labs.overthewire.org -p 2220 cat readme
+                         _                     _ _ _
+                        | |__   __ _ _ __   __| (_) |_
+                        | '_ \ / _` | '_ \ / _` | | __|
+                        | |_) | (_| | | | | (_| | | |_
+                        |_.__/ \__,_|_| |_|\__,_|_|\__|
+
+
+                      This is an OverTheWire game server.
+            More information on http://www.overthewire.org/wargames
+
+bandit18@bandit.labs.overthewire.org's password:
+cGWpMaKXVwDUNgPAVJbWYuGHVn9zl3j8
+```
+
+## L20 setuid
+
+reading material: https://en.wikipedia.org/wiki/Setuid
+
+> [!TIP]
+> **补充知识：File Mode & setuid**
+> Unix file mode 的数值形式(numeric  representation)是一个八进制的四位数(a four-digit octal number)，其中常见的三个位是后三位，也就是我们熟悉的`rwx`。
+> 文件的不同权限叫**mode bits**, 因为mode bits的值仅有4, 2, 1，每个digit的数值表示=各个bit的加和，一般只有4567这些值。4=read bits, 5=`r-x`, 7=`rwx`. 我们常见的让脚本可执行的命令，就是`chmod 755`
+> 当然除了数值也有symbolic representation，在chmod里更改mode的符号格式为`[u/g/o][+/-/=][modebit]`，具体含义可以自行查阅man page。
+>
+> **setuid & setgid bits**
+> 被我们忽略掉的四位数的第一位就是s位。其中4=setuid bit, 2=setgid bit, 1=sticky bit. 那么6711 = 6(4:`setuid` + 2:`setgid`) + 711(`rwx--x--x`)
+
+Below is an excerpt from `man chmod`
+```
+MODES
+     Modes may be absolute or symbolic.  An absolute mode is an octal number constructed from the sum of one or more of the following
+     values:
+
+           4000    (the setuid bit).  Executable files with this bit set will run with effective uid set to the uid of the file owner.
+                   Directories with this bit set will force all files and sub-directories created in them to be owned by the directory
+                   owner and not by the uid of the creating process, if the underlying file system supports this feature: see chmod(2)
+                   and the suiddir option to mount(8).
+           2000    (the setgid bit).  Executable files with this bit set will run with effective gid set to the gid of the file owner.
+           1000    (the sticky bit).  See chmod(2) and sticky(7).
+           0400    Allow read by owner.
+           0200    Allow write by owner.
+           0100    For files, allow execution by owner.  For directories, allow the owner to search in the directory.
+           0040    Allow read by group members.
+           0020    Allow write by group members.
+           0010    For files, allow execution by group members.  For directories, allow group members to search in the directory.
+           0004    Allow read by others.
+           0002    Allow write by others.
+           0001    For files, allow execution by others.  For directories allow others to search in the directory.
+
+    (...)
+
+     The op symbols represent the operation performed, as follows:
+
+     +     If no value is supplied for perm, the ``+'' operation has no effect.  If no value is supplied for who, each permission bit
+           specified in perm, for which the corresponding bit in the file mode creation mask (see umask(2)) is clear, is set.  Otherwise,
+           the mode bits represented by the specified who and perm values are set.
+
+     -     If no value is supplied for perm, the ``-'' operation has no effect.  If no value is supplied for who, each permission bit
+           specified in perm, for which the corresponding bit in the file mode creation mask is set, is cleared.  Otherwise, the mode
+           bits represented by the specified who and perm values are cleared.
+
+     =     The mode bits specified by the who value are cleared, or, if no who value is specified, the owner, group and other mode bits
+           are cleared.  Then, if no value is supplied for who, each permission bit specified in perm, for which the corresponding bit in
+           the file mode creation mask (see umask(2)) is clear, is set.  Otherwise, the mode bits represented by the specified who and
+           perm values are set.
+
+    (...)
+
+EXAMPLES OF VALID MODES
+     644           make a file readable by anyone and writable by the owner only.
+
+     go-w          deny write permission to group and others.
+
+     =rw,+X        set the read and write permissions to the usual defaults, but retain any execute permissions that are currently set.
+
+     +X            make a directory or file searchable/executable by everyone if it is already searchable/executable by anyone.
+
+     755
+     u=rwx,go=rx
+     u=rwx,go=u-w  make a file readable/executable by everyone and writable by the owner only.
+
+     go=           clear all mode bits for group and others.
+
+     g=u-w         set the group bits equal to the user bits, but clear the group write bit.  
+```
+
+Our solution:
+
+Let's see how this binary works. `bandit20-do` is owned by `bandit20` and belongs to group `bandit19`, and can represent bandit20 to run our command under group `bandit19`.
+Group `bandit19` means that any user that belongs to group `bandit19` (in this case, perhaps just the user `bandit19`) can do what the group has permission to do.
+
+`s` means that when executing, `bandit20-do` has the same permission as the user `bandit20` 
+and `x` in the group digit means that `bandit20-do` can be executed in group `bandit19`, and therefore user `bandit19`.
+```
+bandit19@bandit:~$ ls -alt bandit*
+-rwsr-x--- 1 bandit20 bandit19 14880 Sep 19 07:08 bandit20-do
+bandit19@bandit:~$ ./bandit20-do
+Run a command as another user.
+  Example: ./bandit20-do id
+bandit19@bandit:~$ ./bandit20-do id
+uid=11019(bandit19) gid=11019(bandit19) euid=11020(bandit20) groups=11019(bandit19)
+```
+
+If we try printing out the credential directly, it turns out to be forbidden, as it is only readable by its owner bandit20. But using bandit20-do as a workaround we can bypass the permission wall. 
+```
+bandit19@bandit:~$ cat /etc/bandit_pass/bandit20
+cat: /etc/bandit_pass/bandit20: Permission denied
+bandit19@bandit:~$ ls -alt /etc/bandit_pass/bandit20
+-r-------- 1 bandit20 bandit20 33 Sep 19 07:07 /etc/bandit_pass/bandit20
+bandit19@bandit:~$ ./bandit20-do cat /etc/bandit_pass/bandit20
+0qXahG8ZjOVMN9Ghs7iOWsCfZyXOUbYO
+```
+
+
+

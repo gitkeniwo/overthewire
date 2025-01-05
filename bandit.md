@@ -26,6 +26,7 @@ ssh bandit@bandit.labs.overthewire.org -p 2220
   - [L15 Telnet](#l15-telnet)
   - [L16 SSL/TLS](#l16-ssltls)
   - [L17 Port Scanning](#l17-port-scanning)
+  - [L18 diff](#l18-diff)
 
 ## L0
 `ssh bandit0@bandit.labs.overthewire.org -p 2220`
@@ -285,6 +286,8 @@ MU4VWeTyJk8ROof1qqmcBPaLh7lDCPvS
 
 ## L15 Telnet
 
+My first try: `telnet`
+
 > [!tip]
 > Simply put, Telnet is a lesser version of ssh. Transmission of data are in plaintext (unencrypted). 
 > Does not support key authentication or secured file transfer. 
@@ -300,6 +303,9 @@ Correct!
 8xCjnmgoKbGLhHFAZlGE5Tmu4M2tKJQo
 ```
 
+After finishing Lv 16, i realized that this level essentially requires a TCP transport-layer connection.
+So `nc` is also viable.
+
 > [!tip]
 > `nc` or netcat. TCP/UDP工具，构建简单的TCP/HTTP服务，网络守护进程测试 etc.
 > - Handles TCP and UDP connections. 
@@ -307,9 +313,204 @@ Correct!
 > - Unlike telnet(1), nc scripts nicely, and separates error messages onto standard error instead of sending them to standard output, as telnet(1) does with some.
 
 ## L16 SSL/TLS
+> [!note]
+> **SSL/TLS, OpenSSL Takeaways**
+> SSL/TLS: A cryptographic protocal tp provide security for the *transport layer* in the OSI model.
+> OpenSSL: A library of the TLS protocal. Is the world's most widely used implementation.
+> HTTPS could also be understood as HTTP over SSL/TLS
 
+This level is about the usage of `openssl s_client`. To refer to its man page, the command is `man openssl-s_client`.
+
+tldr:
+```
+openssl s_client
+
+OpenSSL command to create TLS client connections.
+More information: <https://www.openssl.org/docs/manmaster/man1/openssl-s_client.html>.
+
+- Display the start and expiry dates for a domain's certificate:
+    openssl s_client -connect host:port 2>/dev/null | openssl x509 -noout -dates
+
+- Display the certificate presented by an SSL/TLS server:
+    openssl s_client -connect host:port </dev/null
+
+- Set the Server Name Indicator (SNI) when connecting to the SSL/TLS server:
+    openssl s_client -connect host:port -servername hostname
+
+- Display the complete certificate chain of an HTTPS server:
+    openssl s_client -connect host:443 -showcerts </dev/null
+```
+
+Solution
+```
+bandit15@bandit:~$ openssl s_client -connect 127.0.0.1:30001
+...TLS messages...
+---
+read R BLOCK
+8xCjnmgoKbGLhHFAZlGE5Tmu4M2tKJQo
+Correct!
+kSkvUpMQ7lBYyCM4GBPvCvT1BfWRy0Dx
+kSkvUpMQ7lBYyCM4GBPvCvT1BfWRy0Dx
+
+closed
+```
+
+🧐 My personal thoughts on this level: https://samizdat.fly.dev/m/ABnfi5QTS6QxQkFCTWfZ5A
 
 ## L17 Port Scanning
 
 `nmap <ip>` carries out a basic port scanning process.
 
+> [!important]
+> `nmap <ip>` by default does not do a full scan. It only scans the most well-known hosts and ports that aren't on that list is omitted.
+> To do a full scan, use `nmap -p 1-65535` or `nmap -p-`. [source](https://unix.stackexchange.com/questions/238640/nmap-doesnt-appear-to-list-all-open-ports)
+
+It is also adviced to enable `service detection` with `-sv`
+```
+SERVICE AND VERSION DETECTION
+       Point Nmap at a remote machine and it might tell you that ports 25/tcp, 80/tcp, and 53/udp are open. Using its nmap-services database of about 2,200 well-known services,
+       Nmap would report that those ports probably correspond to a mail server (SMTP), web server (HTTP), and name server (DNS) respectively. This lookup is usually accurate—the
+       vast majority of daemons listening on TCP port 25 are, in fact, mail servers. However, you should not bet your security on this! People can and do run services on strange
+       ports.
+
+       Even if Nmap is right, and the hypothetical server above is running SMTP, HTTP, and DNS servers, that is not a lot of information. When doing vulnerability assessments
+       (or even simple network inventories) of your companies or clients, you really want to know which mail and DNS servers and versions are running. Having an accurate version
+       number helps dramatically in determining which exploits a server is vulnerable to. Version detection helps you obtain this information.
+
+       After TCP and/or UDP ports are discovered using one of the other scan methods, version detection interrogates those ports to determine more about what is actually
+       running. The nmap-service-probes database contains probes for querying various services and match expressions to recognize and parse responses. Nmap tries to determine
+       the service protocol (e.g. FTP, SSH, Telnet, HTTP), the application name (e.g. ISC BIND, Apache httpd, Solaris telnetd), the version number, hostname, device type (e.g.
+       printer, router), the OS family (e.g. Windows, Linux). When possible, Nmap also gets the Common Platform Enumeration (CPE) representation of this information. Sometimes
+       miscellaneous details like whether an X server is open to connections, the SSH protocol version, or the KaZaA user name, are available. Of course, most services don't
+provide all of this information. If Nmap was compiled with OpenSSL support, it will connect to SSL servers to deduce the service listening behind that encryption layer.
+       Some UDP ports are left in the open|filtered state after a UDP port scan is unable to determine whether the port is open or filtered. Version detection will try to elicit
+       a response from these ports (just as it does with open ports), and change the state to open if it succeeds.  open|filtered TCP ports are treated the same way. Note that
+       the Nmap -A option enables version detection among other things.  A paper documenting the workings, usage, and customization of version detection is available at
+       https://nmap.org/book/vscan.html.
+
+       When RPC services are discovered, the Nmap RPC grinder is automatically used to determine the RPC program and version numbers. It takes all the TCP/UDP ports detected as
+       RPC and floods them with SunRPC program NULL commands in an attempt to determine whether they are RPC ports, and if so, what program and version number they serve up.
+       Thus you can effectively obtain the same info as rpcinfo -p even if the target's portmapper is behind a firewall (or protected by TCP wrappers). Decoys do not currently
+       work with RPC scan.
+
+       When Nmap receives responses from a service but cannot match them to its database, it prints out a special fingerprint and a URL for you to submit it to if you know for
+       sure what is running on the port. Please take a couple minutes to make the submission so that your find can benefit everyone. Thanks to these submissions, Nmap has about
+       6,500 pattern matches for more than 650 protocols such as SMTP, FTP, HTTP, etc.
+
+       Version detection is enabled and controlled with the following options:
+
+       -sV (Version detection)
+           Enables version detection, as discussed above. Alternatively, you can use -A, which enables version detection among other things.
+
+        -sR is an alias for -sV. Prior to March 2011, it was used to active the RPC grinder separately from version detection, but now these options are always combined.
+```
+
+Solution Part 1
+```
+bandit16@bandit:~$ nmap -sV -p 31000-32000 localhost
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-01-05 01:13 UTC
+Stats: 0:01:15 elapsed; 0 hosts completed (1 up), 1 undergoing Service Scan
+Service scan Timing: About 83.33% done; ETC: 01:15 (0:00:15 remaining)
+Stats: 0:01:57 elapsed; 0 hosts completed (1 up), 1 undergoing Service Scan
+Service scan Timing: About 83.33% done; ETC: 01:16 (0:00:23 remaining)
+Nmap scan report for localhost (127.0.0.1)
+Host is up (0.00029s latency).
+Not shown: 995 closed tcp ports (conn-refused)
+PORT      STATE SERVICE     VERSION
+31046/tcp open  echo
+31518/tcp open  ssl/echo
+31691/tcp open  echo
+31790/tcp open  ssl/unknown
+31888/tcp open  echo
+31960/tcp open  echo
+1 service unrecognized despite returning data. If you know the service/version, please submit the following fingerprint at https://nmap.org/cgi-bin/submit.cgi?new-service :
+SF-Port31790-TCP:V=7.94SVN%T=SSL%I=7%D=1/5%Time=6779DCDF%P=x86_64-pc-linux
+SF:-gnu%r(GenericLines,32,"Wrong!\x20Please\x20enter\x20the\x20correct\x20
+SF:current\x20password\.\n")%r(GetRequest,32,"Wrong!\x20Please\x20enter\x2
+SF:0the\x20correct\x20current\x20password\.\n")%r(HTTPOptions,32,"Wrong!\x
+SF:20Please\x20enter\x20the\x20correct\x20current\x20password\.\n")%r(RTSP
+SF:Request,32,"Wrong!\x20Please\x20enter\x20the\x20correct\x20current\x20p
+SF:assword\.\n")%r(Help,32,"Wrong!\x20Please\x20enter\x20the\x20correct\x2
+SF:0current\x20password\.\n")%r(FourOhFourRequest,32,"Wrong!\x20Please\x20
+SF:enter\x20the\x20correct\x20current\x20password\.\n")%r(LPDString,32,"Wr
+SF:ong!\x20Please\x20enter\x20the\x20correct\x20current\x20password\.\n")%
+SF:r(SIPOptions,32,"Wrong!\x20Please\x20enter\x20the\x20correct\x20current
+SF:\x20password\.\n");
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 162.97 seconds
+```
+
+So, we would say 31790 is the one. But when we tried submitting the code to 31790, strange stuff happened.
+
+⚠️ The server shouted KEYUPDATE.
+
+```
+bandit16@bandit:~$ openssl s_client -connect localhost:31790
+...TLS messages
+...
+---
+read R BLOCK
+kSkvUpMQ7lBYyCM4GBPvCvT1BfWRy0Dx
+KEYUPDATE
+```
+
+This is probably due to the CONNECTED COMMANDS.
+
+Below is an excerpt from the man page of openssl-s_client
+```
+CONNECTED COMMANDS
+       If a connection is established with an SSL server then any data received from the server is displayed and any key presses will be
+       sent  to  the  server.  If  end  of file is reached then the connection will be closed down. When used interactively (which means
+       neither -quiet nor -ign_eof have been given), then certain commands are also recognized which perform special  operations.  These
+       commands are a letter which must appear at the start of a line. They are listed below.
+
+       Q   End the current SSL connection and exit.
+
+       R   Renegotiate the SSL session (TLSv1.2 and below only).
+
+       k   Send a key update message to the server (TLSv1.3 only)
+
+       K   Send a key update message to the server and request one back (TLSv1.3 only)
+```
+
+What we gotta do is to escape `k`, or starting `s_client` with `-ign_eof`.
+
+After some tests, `\k` really didn't worked out for me. So i used `openssl s_client -connect localhost:31790 -ign_eof`.
+
+```
+bandit16@bandit:~$ openssl s_client -connect localhost:31790 -ign_eof
+kSkvUpMQ7lBYyCM4GBPvCvT1BfWRy0Dx
+Correct!
+-----BEGIN RSA PRIVATE KEY-----
+MIIEogIBAAKCAQEAvmOkuifmMg6HL2YPIOjon6iWfbp7c3jx34YkYWqUH57SUdyJ
+imZzeyGC0gtZPGujUSxiJSWI/oTqexh+cAMTSMlOJf7+BrJObArnxd9Y7YT2bRPQ
+Ja6Lzb558YW3FZl87ORiO+rW4LCDCNd2lUvLE/GL2GWyuKN0K5iCd5TbtJzEkQTu
+DSt2mcNn4rhAL+JFr56o4T6z8WWAW18BR6yGrMq7Q/kALHYW3OekePQAzL0VUYbW
+JGTi65CxbCnzc/w4+mqQyvmzpWtMAzJTzAzQxNbkR2MBGySxDLrjg0LWN6sK7wNX
+x0YVztz/zbIkPjfkU1jHS+9EbVNj+D1XFOJuaQIDAQABAoIBABagpxpM1aoLWfvD
+KHcj10nqcoBc4oE11aFYQwik7xfW+24pRNuDE6SFthOar69jp5RlLwD1NhPx3iBl
+J9nOM8OJ0VToum43UOS8YxF8WwhXriYGnc1sskbwpXOUDc9uX4+UESzH22P29ovd
+d8WErY0gPxun8pbJLmxkAtWNhpMvfe0050vk9TL5wqbu9AlbssgTcCXkMQnPw9nC
+YNN6DDP2lbcBrvgT9YCNL6C+ZKufD52yOQ9qOkwFTEQpjtF4uNtJom+asvlpmS8A
+vLY9r60wYSvmZhNqBUrj7lyCtXMIu1kkd4w7F77k+DjHoAXyxcUp1DGL51sOmama
++TOWWgECgYEA8JtPxP0GRJ+IQkX262jM3dEIkza8ky5moIwUqYdsx0NxHgRRhORT
+8c8hAuRBb2G82so8vUHk/fur85OEfc9TncnCY2crpoqsghifKLxrLgtT+qDpfZnx
+SatLdt8GfQ85yA7hnWWJ2MxF3NaeSDm75Lsm+tBbAiyc9P2jGRNtMSkCgYEAypHd
+HCctNi/FwjulhttFx/rHYKhLidZDFYeiE/v45bN4yFm8x7R/b0iE7KaszX+Exdvt
+SghaTdcG0Knyw1bpJVyusavPzpaJMjdJ6tcFhVAbAjm7enCIvGCSx+X3l5SiWg0A
+R57hJglezIiVjv3aGwHwvlZvtszK6zV6oXFAu0ECgYAbjo46T4hyP5tJi93V5HDi
+Ttiek7xRVxUl+iU7rWkGAXFpMLFteQEsRr7PJ/lemmEY5eTDAFMLy9FL2m9oQWCg
+R8VdwSk8r9FGLS+9aKcV5PI/WEKlwgXinB3OhYimtiG2Cg5JCqIZFHxD6MjEGOiu
+L8ktHMPvodBwNsSBULpG0QKBgBAplTfC1HOnWiMGOU3KPwYWt0O6CdTkmJOmL8Ni
+blh9elyZ9FsGxsgtRBXRsqXuz7wtsQAgLHxbdLq/ZJQ7YfzOKU4ZxEnabvXnvWkU
+YOdjHdSOoKvDQNWu6ucyLRAWFuISeXw9a/9p7ftpxm0TSgyvmfLF2MIAEwyzRqaM
+77pBAoGAMmjmIJdjp+Ez8duyn3ieo36yrttF5NSsJLAbxFpdlc1gvtGCWW+9Cq0b
+dxviW8+TFVEBl1O4f7HVm6EpTscdDxU+bCXWkfjuRb7Dy9GOtt9JPsX8MBTakzh3
+vBgsyi/sN3RqRBcGU40fOoZyfAMT8s1m/uYv52O6IgeuZ/ujbjY=
+-----END RSA PRIVATE KEY-----
+
+closed
+```
+
+## L18 diff

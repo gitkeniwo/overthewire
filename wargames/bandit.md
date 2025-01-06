@@ -30,7 +30,7 @@ ssh bandit@bandit.labs.overthewire.org -p 2220
   - [L19 ssh \[cmd\]](#l19-ssh-cmd)
   - [L20 setuid](#l20-setuid)
   - [L21 netcat TCP Listener](#l21-netcat-tcp-listener)
-  - [L22](#l22)
+  - [L22 crontab](#l22-crontab)
 
 ## L0
 `ssh bandit0@bandit.labs.overthewire.org -p 2220`
@@ -599,10 +599,13 @@ reading material: https://en.wikipedia.org/wiki/Setuid
 > **补充知识：File Mode & setuid**
 > 
 > Unix file mode 的数值形式(numeric  representation)是一个八进制的四位数(a four-digit octal number)，其中常见的三个位是后三位，也就是我们熟悉的`rwx`。
-> 文件的不同权限叫**mode bits**, 因为mode bits的值仅有4, 2, 1，每个digit的数值表示=各个bit的加和，一般只有4567这些值。4=read bits, 5=`r-x`, 7=`rwx`. 我们常见的让脚本可执行的命令，就是`chmod 755`
+> 
+> 文件的不同权限叫**mode bits**, 因为mode bits的值仅有4, 2, 1，每个digit的数值表示=各个bit的加和，一般只有4567这些值。4=read bits, 5=`r-x`, 7=`rwx`. 我们常见的让脚本可执行的命令，就是`chmod 755`.
+> 
 > 当然除了数值也有symbolic representation，在chmod里更改mode的符号格式为`[u/g/o][+/-/=][modebit]`，具体含义可以自行查阅man page。
 >
 > **setuid & setgid bits**
+> 
 > 被我们忽略掉的四位数的第一位就是s位。其中4=setuid bit, 2=setgid bit, 1=sticky bit. 那么6711 = 6(4:`setuid` + 2:`setgid`) + 711(`rwx--x--x`)
 
 Below is an excerpt from `man chmod`
@@ -737,4 +740,28 @@ Password matches, sending next password
 EeoULMCra2q0dSkYj561DX7s1CpBuOBt
 ```
 
-## L22
+## L22 crontab
+> [!tip]
+> **GTK**
+>
+> - cron
+> - crontab
+> - cron.d
+
+
+```
+bandit21@bandit:~$ cat /etc/cron.d/cronjob_bandit22
+@reboot bandit22 /usr/bin/cronjob_bandit22.sh &> /dev/null
+* * * * * bandit22 /usr/bin/cronjob_bandit22.sh &> /dev/null
+
+bandit21@bandit:~$ cat /usr/bin/cronjob_bandit22.sh
+#!/bin/bash
+chmod 644 /tmp/t7O6lds9S0RqQh9aMcz6ShpAoZKF7fgv
+cat /etc/bandit_pass/bandit22 > /tmp/t7O6lds9S0RqQh9aMcz6ShpAoZKF7fgv
+
+bandit21@bandit:~$ file /tmp/t7O6lds9S0RqQh9aMcz6ShpAoZKF7fgv
+/tmp/t7O6lds9S0RqQh9aMcz6ShpAoZKF7fgv: ASCII text
+
+bandit21@bandit:~$ cat /tmp/t7O6lds9S0RqQh9aMcz6ShpAoZKF7fgv
+tRae0UfB9v0UzbCdn9cY0gQnds9GF58Q
+```

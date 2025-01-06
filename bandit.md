@@ -29,6 +29,8 @@ ssh bandit@bandit.labs.overthewire.org -p 2220
   - [L18 diff](#l18-diff)
   - [L19 ssh \[cmd\]](#l19-ssh-cmd)
   - [L20 setuid](#l20-setuid)
+  - [L21 netcat TCP Listener](#l21-netcat-tcp-listener)
+  - [L22](#l22)
 
 ## L0
 `ssh bandit0@bandit.labs.overthewire.org -p 2220`
@@ -250,7 +252,9 @@ In the first try, `-p` actually prepended four `00` to the output, causing `gunz
 
 > [!tip] 
 > **Compression**
+> 
 > `.tar.gz` is the defacto archive & compression standard in CLI.
+> 
 > - Creating a Tar.gz Archive
 >   - `tar -czvf archive_name.tar.gz file1 file2 directory1`
 > - Extracting a Tar.gz Archive
@@ -292,7 +296,9 @@ My first try: `telnet`
 
 > [!tip]
 > Simply put, Telnet is a lesser version of ssh. Transmission of data are in plaintext (unencrypted). 
+> 
 > Does not support key authentication or secured file transfer. 
+> 
 > Port is 23 by default. 
 
 ```powershell
@@ -317,8 +323,11 @@ So `nc` is also viable.
 ## L16 SSL/TLS
 > [!note]
 > **SSL/TLS, OpenSSL Takeaways**
+> 
 > SSL/TLS: A cryptographic protocal tp provide security for the *transport layer* in the OSI model.
+> 
 > OpenSSL: A library of the TLS protocal. Is the world's most widely used implementation.
+> 
 > HTTPS could also be understood as HTTP over SSL/TLS
 
 This level is about the usage of `openssl s_client`. To refer to its man page, the command is `man openssl-s_client`.
@@ -365,6 +374,7 @@ closed
 
 > [!important]
 > `nmap <ip>` by default does not do a full scan. It only scans the most well-known hosts, and ports that aren't on that list are omitted.
+> 
 > To do a full scan, use `nmap -p 1-65535` or `nmap -p-`. [source](https://unix.stackexchange.com/questions/238640/nmap-doesnt-appear-to-list-all-open-ports)
 
 It is also adviced to enable `service detection` with `-sv`
@@ -587,6 +597,7 @@ reading material: https://en.wikipedia.org/wiki/Setuid
 
 > [!TIP]
 > **补充知识：File Mode & setuid**
+> 
 > Unix file mode 的数值形式(numeric  representation)是一个八进制的四位数(a four-digit octal number)，其中常见的三个位是后三位，也就是我们熟悉的`rwx`。
 > 文件的不同权限叫**mode bits**, 因为mode bits的值仅有4, 2, 1，每个digit的数值表示=各个bit的加和，一般只有4567这些值。4=read bits, 5=`r-x`, 7=`rwx`. 我们常见的让脚本可执行的命令，就是`chmod 755`
 > 当然除了数值也有symbolic representation，在chmod里更改mode的符号格式为`[u/g/o][+/-/=][modebit]`，具体含义可以自行查阅man page。
@@ -680,5 +691,50 @@ bandit19@bandit:~$ ./bandit20-do cat /etc/bandit_pass/bandit20
 0qXahG8ZjOVMN9Ghs7iOWsCfZyXOUbYO
 ```
 
+## L21 netcat TCP Listener
+This one actually took me some time. 
+At first I thought is about Access Control and file modes again, 
+so it really baffled me when starting from the executable and having no clue what is going on.
 
+Let's see what is happening locally first. I use nmap to identify what service is running on 2220 localhost (ssh).
+```
+bandit20@bandit:~$ nmap -sV -p 2220 localhost
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-01-06 00:38 UTC
+Nmap scan report for localhost (127.0.0.1)
+Host is up (0.00010s latency).
 
+PORT     STATE SERVICE VERSION
+2220/tcp open  ssh     OpenSSH 9.6p1 (protocol 2.0)
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 0.46 seconds
+
+bandit20@bandit:~$ ./suconnect 2220
+Read: SSH-2.0-OpenSSH_9.6p1
+ERROR: This doesn't match the current password!
+
+bandit20@bandit:~$ nc localhost 2220
+SSH-2.0-OpenSSH_9.6p1
+```
+
+When I use `nc nc localhost 2220` to connect to port 2220, the ssh server prints `SSH-2.0-OpenSSH_9.6p1` which is just **the SSH server's initial greeting message**,
+so `./suconnect 2220` actually connects to `bandit20@localhost:2220`, reads the first line and see if this line matches.
+
+And as far as I can tell, `./suconnect` cannot connect to another username (we're gonna be stuck with bandit20)
+So, the problem here is for suconnect to match. We'll in this case create our own network daemon. 
+
+The perfect way to do this is to use netcat `nc` again. `nc` implements TCP and can of course initialize a TCP listener on `bandit20@localhost:SOMEPORT`.
+We echo the password for Lv.20 and pass it for `nc -l` to serve it on port 2223 with a listener `-l`.
+`&` is for detach mode so `nc` gives back our shell control.
+
+```
+bandit20@bandit:~$ echo "0qXahG8ZjOVMN9Ghs7iOWsCfZyXOUbYO" | nc -l -p 2223 &
+[2] 248374
+
+bandit20@bandit:~$ ./suconnect 2223
+Read: 0qXahG8ZjOVMN9Ghs7iOWsCfZyXOUbYO
+Password matches, sending next password
+EeoULMCra2q0dSkYj561DX7s1CpBuOBt
+```
+
+## L22

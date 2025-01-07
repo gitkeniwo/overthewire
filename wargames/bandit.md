@@ -1059,7 +1059,7 @@ I admit that starting from here I'm stuck. So the following solution is rephrase
 > 
 > Well, `more` does "more or less" the same thing. When you shrink your terminal window to a certain point, `more` decides that the welcome text is too long for direct printing, and would rather redirect the STDOUT to `more`'s pager interface, where we can actually pull some more strings. 
 
-
+<img width="885" alt="image" src="https://github.com/user-attachments/assets/027cc550-38d7-4beb-a9ae-418db7ca293b" />
 
 Let's see what CMD can benefit us in this situation. After a quit browsing after hitting `?`, the most promising ones are:
 ```
@@ -1067,4 +1067,7 @@ v                       Start up '/usr/bin/vi' at current line
 !<cmd> or :!<cmd>       Execute <cmd> in a subshell
 ```
 
-`v` takes us to `$EDITOR` which is usually `vim` by default in today's linux machines, while `!<cmd>` executes `<cmd>`. I tried `!/bin/sh` but nothing happened. So press `v` and we are in `vim`.
+`v` takes us to `$EDITOR` which is usually `vim` by default in today's linux machines, while `!<cmd>` executes `<cmd>`. I tried `!/bin/sh` but nothing happened. So press `v`, and now we are in `vim`, and can actually restore the shell window to its normal size.
+
+<img width="885" alt="image" src="https://github.com/user-attachments/assets/8cbb4d97-c4d1-43a9-9026-3b3b783d9cf8" />
+

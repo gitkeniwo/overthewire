@@ -1071,3 +1071,13 @@ v                       Start up '/usr/bin/vi' at current line
 
 <img width="885" alt="image" src="https://github.com/user-attachments/assets/8cbb4d97-c4d1-43a9-9026-3b3b783d9cf8" />
 
+In vim, `:h` takes us to vim's documentation page, where we can find the command to open another file, without quitting vim. 
+
+It is suggested to learn vim first, but you can open a new file in vim using `:e[dit] file` - edit a file in a new buffer. A buffer is just like a tab in vim.
+
+Remember in Level 13->14 how every bandit password is stored at `/etc/bandit_pass/bandit00` and can be read by the corresponding owner themselves?
+
+Press `y` to yank it to you clipboard.
+```
+s0773xxkk0MXfdqOfPRVr9L3jJBUOgCZ
+```

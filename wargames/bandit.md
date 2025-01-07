@@ -1073,11 +1073,22 @@ v                       Start up '/usr/bin/vi' at current line
 
 In vim, `:h` takes us to vim's documentation page, where we can find the command to open another file, without quitting vim. 
 
+<img width="878" alt="image" src="https://github.com/user-attachments/assets/1b436021-4008-453a-a25f-184a1443397a" />
+
 It is suggested to learn vim first, but you can open a new file in vim using `:e[dit] file` - edit a file in a new buffer. A buffer is just like a tab in vim.
 
 Remember in Level 13->14 how every bandit password is stored at `/etc/bandit_pass/bandit00` and can be read by the corresponding owner themselves?
+
+<img width="878" alt="image" src="https://github.com/user-attachments/assets/65970b05-43e1-4aa8-959d-de7bbb711f8f" />
+<img width="878" alt="image" src="https://github.com/user-attachments/assets/b38657b3-969e-487e-8a29-25596ef29622" />
 
 Press `y` to yank it to you clipboard.
 ```
 s0773xxkk0MXfdqOfPRVr9L3jJBUOgCZ
 ```
+
+<img width="878" alt="image" src="https://github.com/user-attachments/assets/599e0850-390e-4a0f-85fb-f39b0ef64708" />
+<img width="878" alt="image" src="https://github.com/user-attachments/assets/3528b0b9-983b-432f-9694-157a5c76336e" />
+
+> [!important]
+> So the lesson learned here is that allowing access to `vim` is just equivalent to allowing access to your `/bin/bash` or other shell, if no other discretionary access control policies are applied! 

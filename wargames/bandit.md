@@ -34,7 +34,7 @@ ssh bandit@bandit.labs.overthewire.org -p 2220
   - [L23 cron + Bash Script](#l23-cron--bash-script)
   - [L24 cron + Bash Script](#l24-cron--bash-script)
   - [L25 Bruteforcing](#l25-bruteforcing)
-  - [L26](#l26)
+  - [L26 login shell, `/etc/passws`, `more`](#l26-login-shell-etcpassws-more)
 
 ## L0
 `ssh bandit0@bandit.labs.overthewire.org -p 2220`
@@ -983,4 +983,88 @@ Correct!
 The password of user bandit25 is iCi86ttT4KSNe1armKiwbQNmB3YJP3q4
 ```
 
-## L26
+## L26 login shell, `/etc/passws`, `more`
+This is the most tricky one I've encountered so far. I had to resort to an online step-by-step guide that employs a clever way of taking back control of the ssh connection using `more` and `vim` built-in CMDs.
+
+First, problem detected:
+```
+bandit25@bandit:~$ ssh -i bandit26.sshkey bandit25@bandit.labs.overthewire.org -p 2220
+The authenticity of host '[bandit.labs.overthewire.org]:2220 ([127.0.0.1]:2220)' can't be established.
+ED25519 key fingerprint is SHA256:C2ihUBV7ihnV1wUXRb4RrEcLfXC5CXlhmAAM/urerLY.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Could not create directory '/home/bandit25/.ssh' (Permission denied).
+Failed to add the host to the list of known hosts (/home/bandit25/.ssh/known_hosts).
+                         _                     _ _ _
+                        | |__   __ _ _ __   __| (_) |_
+                        | '_ \ / _` | '_ \ / _` | | __|
+                        | |_) | (_| | | | | (_| | | |_
+                        |_.__/ \__,_|_| |_|\__,_|_|\__|
+
+
+                      This is an OverTheWire game server.
+            More information on http://www.overthewire.org/wargames
+
+!!! You are trying to log into this SSH server with a password on port 2220 from localhost.
+!!! Connecting from localhost is blocked to conserve resources.
+!!! Please log out and log in again.
+
+bandit25@bandit.labs.overthewire.org: Permission denied (publickey).
+bandit25@bandit:~$
+```
+After logging into bandit26, the ssh closes immediately after displaying a piece of welcome text. Clearly we are shut out before reaching `/bin/bash`.
+
+> [!tip]
+> Login shell information for users is stored at `/etc/passwd`, as well as other critical information.
+> 
+> ![](https://www.cyberciti.biz/media/ssb.images/uploaded_images/passwd-file-791527.png)
+> 
+> `username:password:UID:GID:userIDinfo:home_directory:command_or_shell`
+>
+> Since each line here starts with username, we can grep it by `cat /etc/passwd | grep "^$USER"`
+
+```
+bandit25@bandit:~$ cat /etc/passwd | grep "bandit26"
+bandit26:x:11026:11026:bandit level 26:/home/bandit26:/usr/bin/showtext
+```
+
+The login command for bandit26 is just `/usr/bin/showtext`. However, it appears that this `/etc/passwd` is something that only root user has access to. The same is applied to `/usr/bin/showtext` too.
+
+```
+bandit25@bandit:~$ ls -alt  /etc/passwd
+-rw-r--r-- 1 root root 6283 Sep 19 07:09 /etc/passwd
+
+bandit25@bandit:~$ ls -alt /usr/bin/showtext
+-rwxr-xr-x 1 root root 58 Sep 19 07:08 /usr/bin/showtext
+```
+
+Now that we know `/usr/bin/showtext` is going to be executed anyway. Let's see what strings could be pulled on the exact commands `/usr/bin/showtext` is going to tun.
+
+```
+bandit25@bandit:~$ cat /usr/bin/showtext
+#!/bin/sh
+
+export TERM=linux
+
+exec more ~/text.txt
+exit 0
+```
+
+I admit that starting from here I'm stuck. So the following solution is rephrased from what i've gathered from online.
+
+> [!tip]
+> `more` is a lesser (but no `less`er) version of the pager `less` that offers similar functionalities. 
+> 
+> As some of you have already noticed, when using `bat` to print out files, if the file's not short enough, bat will redirect the STDOUT to your `$PAGER` which is often `less`. So from here you can access the built-in commands of `less`. 
+> 
+> Well, `more` does "more or less" the same thing. When you shrink your terminal window to a certain point, `more` decides that the welcome text is too long for direct printing, and would rather redirect the STDOUT to `more`'s pager interface, where we can actually pull some more strings. 
+
+
+
+Let's see what CMD can benefit us in this situation. After a quit browsing after hitting `?`, the most promising ones are:
+```
+v                       Start up '/usr/bin/vi' at current line
+!<cmd> or :!<cmd>       Execute <cmd> in a subshell
+```
+
+`v` takes us to `$EDITOR` which is usually `vim` by default in today's linux machines, while `!<cmd>` executes `<cmd>`. I tried `!/bin/sh` but nothing happened. So press `v` and we are in `vim`.

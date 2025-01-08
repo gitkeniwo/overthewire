@@ -57,7 +57,7 @@ contribute to the OverTheWire community so we can keep these games free!
 The password you are looking for is: ZjLjTmM6FvvyRnrb2rfNWOZOTa6ip5If
 
 ## L2
-ok this one is trick. So basically if your filename is just a hyphen `-`, you use double hyphen to escape it (mark the end of flags and options), as in `vim -- -` or `cat ./-`. However, somehow `cat -- -` didn't work for me.
+Ok this one was a bit tricky at first. So basically if your filename is just a hyphen `-`, you use double hyphen to escape it (mark the end of flags and options), as in `vim -- -` or `cat ./-`. However, somehow `cat -- -` didn't work for me.
 
 263JGJPfgU6LtdEvgfWU1XP5yac29mFx
 

@@ -34,7 +34,15 @@ ssh bandit@bandit.labs.overthewire.org -p 2220
   - [L23 cron + Bash Script](#l23-cron--bash-script)
   - [L24 cron + Bash Script](#l24-cron--bash-script)
   - [L25 Bruteforcing](#l25-bruteforcing)
-  - [L26 login shell, `/etc/passws`, `more`](#l26-login-shell-etcpassws-more)
+  - [L26 login shell, `/etc/passws`, `more`, `vim`](#l26-login-shell-etcpassws-more-vim)
+  - [L27](#l27)
+  - [L28 git over ssh](#l28-git-over-ssh)
+  - [L29 `git reset --hard`](#l29-git-reset---hard)
+  - [L30 git log](#l30-git-log)
+  - [L31 git tag](#l31-git-tag)
+  - [L32 push file](#l32-push-file)
+  - [L33 THE UPPERCASE SHELL](#l33-the-uppercase-shell)
+  - [L34 TBC](#l34-tbc)
 
 ## L0
 `ssh bandit0@bandit.labs.overthewire.org -p 2220`
@@ -983,7 +991,7 @@ Correct!
 The password of user bandit25 is iCi86ttT4KSNe1armKiwbQNmB3YJP3q4
 ```
 
-## L26 login shell, `/etc/passws`, `more`
+## L26 login shell, `/etc/passws`, `more`, `vim`
 This is the most tricky one I've encountered so far. I had to resort to an online step-by-step guide that employs a clever way of taking back control of the ssh connection using `more` and `vim` built-in CMDs.
 
 First, problem detected:
@@ -1077,7 +1085,7 @@ In vim, `:h` takes us to vim's documentation page, where we can find the command
 
 It is suggested to learn vim first, but you can open a new file in vim using `:e[dit] file` - edit a file in a new buffer. A buffer is just like a tab in vim.
 
-Remember in Level 13->14 how every bandit password is stored at `/etc/bandit_pass/bandit00` and can be read by the corresponding owner themselves?
+Remember in Level 13->14 how every bandit password is stored at `/etc/bandit_pass/bandit00` and can be read by the corresponding owner themselves. This is exactly where we are heading.
 
 <img width="878" alt="image" src="https://github.com/user-attachments/assets/65970b05-43e1-4aa8-959d-de7bbb711f8f" />
 <img width="878" alt="image" src="https://github.com/user-attachments/assets/b38657b3-969e-487e-8a29-25596ef29622" />
@@ -1087,8 +1095,363 @@ Press `y` to yank it to you clipboard.
 s0773xxkk0MXfdqOfPRVr9L3jJBUOgCZ
 ```
 
+The next step is to conjure up our shell. 
+
+Luckily, thanks to the almighty vim, we are able to switch to shell just inside vim, using `:shell` that takes us to `$SHELL`.
+But bear in mind that our `$SHELL` is still set to `/usr/bin/showtext` as in `/etc/passwd/`. 
+With luck again, vim allows customizing which shell to launch by `:set shell=/bin/bash`.
+
 <img width="878" alt="image" src="https://github.com/user-attachments/assets/599e0850-390e-4a0f-85fb-f39b0ef64708" />
 <img width="878" alt="image" src="https://github.com/user-attachments/assets/3528b0b9-983b-432f-9694-157a5c76336e" />
 
+Glad that we are back on the right track.
+
 > [!important]
 > So the lesson learned here is that allowing access to `vim` is just equivalent to allowing access to your `/bin/bash` or other shell, if no other discretionary access control policies are applied! 
+
+## L27
+> Good job getting a shell! Now hurry and grab the password for bandit27!
+
+```
+bandit26@bandit:~$ ./bandit27-do cat /etc/bandit_pass/bandit27
+upsNCc7vzaRDx6oZC6GiR6ERwe1MowGB
+```
+
+## L28 git over ssh
+> There is a git repository at ssh://bandit27-git@localhost/home/bandit27-git/repo via the port 2220. The password for the user bandit27-git is the same as for the user bandit27.
+> 
+> Clone the repository and find the password for the next level.
+
+From what is said in the problem description, there is a separate `bandit27-git` user. A quick `/etc/passwd` grep tells us that git-shell is the default login command.
+And it is actually disabled if connected directly through ssh.
+
+```sh
+bandit27@bandit:~$ cat /etc/passwd | grep bandit27
+bandit27:x:11027:11027:bandit level 27:/home/bandit27:/bin/bash
+bandit27-git:x:11527:11527::/home/bandit27-git:/usr/bin/git-shell
+
+bandit27@bandit:~$ ssh bandit27-git@localhost -p 2220
+...
+fatal: Interactive git shell is not enabled.
+hint: ~/git-shell-commands should exist and have read and execute access.
+Connection to localhost closed.
+```
+
+This is the same with GitHub's own ssh server `git@github.com`. 
+So i'll just try git clone directly. 
+Be aware that the port is `2220` instead of ssh's `22` by default.
+
+```
+bandit27@bandit:~$ git clone ssh://bandit27-git@localhost:2220/home/bandit27-git/repo /tmp/heythere
+Cloning into '/tmp/heythere'...
+The authenticity of host '[localhost]:2220 ([127.0.0.1]:2220)' can't be established.
+ED25519 key fingerprint is SHA256:C2ihUBV7ihnV1wUXRb4RrEcLfXC5CXlhmAAM/urerLY.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Could not create directory '/home/bandit27/.ssh' (Permission denied).
+Failed to add the host to the list of known hosts (/home/bandit27/.ssh/known_hosts).
+                         _                     _ _ _
+                        | |__   __ _ _ __   __| (_) |_
+                        | '_ \ / _` | '_ \ / _` | | __|
+                        | |_) | (_| | | | | (_| | | |_
+                        |_.__/ \__,_|_| |_|\__,_|_|\__|
+
+
+                      This is an OverTheWire game server.
+            More information on http://www.overthewire.org/wargames
+
+bandit27-git@localhost's password:
+remote: Enumerating objects: 3, done.
+remote: Counting objects: 100% (3/3), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 3 (delta 0), reused 0 (delta 0), pack-reused 0
+Receiving objects: 100% (3/3), done.
+
+bandit27@bandit:~$ cat /tmp/heythere/README
+The password to the next level is: Yz9IpL0sBcCeuG7m9uQFt8ZNpS4HZRcN
+```
+
+## L29 `git reset --hard`
+
+```
+bandit28@bandit:~$ git clone ssh://bandit28-git@localhost:2220/home/bandit28-git/repo /tmp/heythere28
+bandit28@bandit:~$ cd /tmp/heythere28
+bandit28@bandit:/tmp/heythere28$ ls -alt
+total 17020
+drwxrwx-wt 1 root     root     17412096 Jan  8 02:31 ..
+drwxrwxr-x 3 bandit28 bandit28     4096 Jan  8 02:30 .
+drwxrwxr-x 8 bandit28 bandit28     4096 Jan  8 02:30 .git
+-rw-rw-r-- 1 bandit28 bandit28      111 Jan  8 02:30 README.md
+bandit28@bandit:/tmp/heythere28$ cat README.md
+# Bandit Notes
+Some notes for level29 of bandit.
+
+## credentials
+
+- username: bandit29
+- password: xxxxxxxxxx
+```
+
+I was really stuck or one or two minute, before realizing that this repo is tracked by Git VCS. 
+It's gotta be a git quiz.
+
+> [!important]
+> Before proceeding, it is best to figure these out:
+> - Git working tree, index, HEAD, and `git reset --soft` vs `--hard`
+> - `git log` and `git reflog`
+
+```
+bandit28@bandit:/tmp/heythere28$ git log
+WARNING: terminal is not fully functional
+Press RETURN to continue
+commit 817e303aa6c2b207ea043c7bba1bb7575dc4ea73 (HEAD -> master, origin/master, origin/HEAD)
+Author: Morla Porla <morla@overthewire.org>
+Date:   Thu Sep 19 07:08:39 2024 +0000
+
+    fix info leak
+
+commit 3621de89d8eac9d3b64302bfb2dc67e9a566decd
+Author: Morla Porla <morla@overthewire.org>
+Date:   Thu Sep 19 07:08:39 2024 +0000
+
+    add missing data
+
+commit 0622b73250502618babac3d174724bb303c32182
+Author: Ben Dover <noone@overthewire.org>
+Date:   Thu Sep 19 07:08:39 2024 +0000
+
+    initial commit of README.md
+
+bandit28@bandit:/tmp/heythere28$ git reset --hard 3621de89d8eac9d3b64302bfb2dc67e9a566decd
+HEAD is now at 3621de8 add missing data
+bandit28@bandit:/tmp/heythere28$ cat README.md
+# Bandit Notes
+Some notes for level29 of bandit.
+
+## credentials
+
+- username: bandit29
+- password: 4pT1t5DENaYuqnqvadYs1oE4QLCdjmJ7
+```
+
+## L30 git log
+
+```
+bandit29@bandit:/tmp$ git clone ssh://bandit29-git@localhost:2220/home/bandit29-git/repo git29/
+Cloning into 'git29'...
+The authenticity of host '[localhost]:2220 ([127.0.0.1]:2220)' can't be established.
+ED25519 key fingerprint is SHA256:C2ihUBV7ihnV1wUXRb4RrEcLfXC5CXlhmAAM/urerLY.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Could not create directory '/home/bandit29/.ssh' (Permission denied).
+Failed to add the host to the list of known hosts (/home/bandit29/.ssh/known_hosts).
+                         _                     _ _ _
+                        | |__   __ _ _ __   __| (_) |_
+                        | '_ \ / _` | '_ \ / _` | | __|
+                        | |_) | (_| | | | | (_| | | |_
+                        |_.__/ \__,_|_| |_|\__,_|_|\__|
+
+
+                      This is an OverTheWire game server.
+            More information on http://www.overthewire.org/wargames
+
+bandit29-git@localhost's password:
+remote: Enumerating objects: 16, done.
+remote: Counting objects: 100% (16/16), done.
+remote: Compressing objects: 100% (11/11), done.
+remote: Total 16 (delta 2), reused 0 (delta 0), pack-reused 0
+Receiving objects: 100% (16/16), done.
+Resolving deltas: 100% (2/2), done.
+bandit29@bandit:/tmp$
+```
+
+It seems that `git log` has only two records:
+```
+bandit29@bandit:/tmp/git29$ git log
+WARNING: terminal is not fully functional
+Press RETURN to continue
+commit 6ac7796430c0f39290a0e29a4d32e5126544b022 (HEAD -> master, origin/master, origin/HEAD)
+Author: Ben Dover <noone@overthewire.org>
+Date:   Thu Sep 19 07:08:41 2024 +0000
+
+    fix username
+
+commit e65a928cca4db1863b478cf5e93d1d5b1c1bd6b2
+Author: Ben Dover <noone@overthewire.org>
+Date:   Thu Sep 19 07:08:41 2024 +0000
+
+    initial commit of README.md
+bandit29@bandit:/tmp/git29$ git reflog
+WARNING: terminal is not fully functional
+Press RETURN to continue
+```
+
+Oh wait. I've been working with git since my freshman year, and of course this ain't the whole picture.
+
+To see the hidden commits, `--all` flag is a must. And with a little help of visualization, we get the following nice ASCII art style git branch tree.
+
+```
+$ git log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(auto)%d%C(reset)%n''          %C(white)%s%C(reset) %C(dim white)- %an%C(reset)' --all
+* 081ac38 - Thu, 19 Sep 2024 07:08:41 +0000 (4 months ago) (origin/dev)
+|           add data needed for development - Morla Porla
+* 03aa12c - Thu, 19 Sep 2024 07:08:41 +0000 (4 months ago)
+|           add gif2ascii - Ben Dover
+| * 7226732 - Thu, 19 Sep 2024 07:08:41 +0000 (4 months ago) (origin/sploits-dev)
+|/            add some silly exploit, just for shit and giggles - Morla Porla
+* 6ac7796 - Thu, 19 Sep 2024 07:08:41 +0000 (4 months ago) (HEAD -> master, origin/master, origin/HEAD)
+|           fix username - Ben Dover
+* e65a928 - Thu, 19 Sep 2024 07:08:41 +0000 (4 months ago)
+            initial commit of README.md - Ben Dover
+```
+
+> By default, with no arguments, git log lists the commits made in that repository in reverse chronological order. https://git-scm.com/book/en/v2/Git-Basics-Viewing-the-Commit-History
+
+It's because the HEAD is at `master`, `origin/master` that we don't see upcoming git logs in `origin/dev`, which is most likely on `dev` or `sploits-dev` branch in a remote repo that is still being worked on and hasn't been merged to `master` branch.
+
+Judging from the commit message, it seems that our best chance is `* 081ac38 - Thu, 19 Sep 2024 07:08:41 +0000 (4 months ago) (origin/dev) add data needed for development - Morla Porla`
+
+```
+bandit29@bandit:/tmp/git29$ git reset --hard 081ac38
+HEAD is now at 081ac38 add data needed for development
+
+bandit29@bandit:/tmp/git29$ ls -alt
+total 17024
+drwxrwx-wt 1 root     root     17412096 Jan  8 03:04 ..
+drwxrwxr-x 4 bandit29 bandit29     4096 Jan  8 03:04 .
+drwxrwxr-x 2 bandit29 bandit29     4096 Jan  8 03:04 code
+drwxrwxr-x 8 bandit29 bandit29     4096 Jan  8 03:04 .git
+-rw-rw-r-- 1 bandit29 bandit29      134 Jan  8 03:04 README.md
+bandit29@bandit:/tmp/git29$ ls code
+gif2ascii.py
+bandit29@bandit:/tmp/git29$ cat README.md
+# Bandit Notes
+Some notes for bandit30 of bandit.
+
+## credentials
+
+- username: bandit30
+- password: qp30ex3VLz5MDG1n91YowTv4Q8l7CDZL
+```
+## L31 git tag
+
+> [!tip]
+> Recommended Reading: https://git-scm.com/book/en/v2/Git-Basics-Tagging
+
+```
+bandit30@bandit:~$ git clone ssh://bandit30-git@localhost:2220/home/bandit30-git/repo /tmp/git30/
+Cloning into '/tmp/git30'...
+bandit30@bandit:~$ cd /tmp/git30
+bandit30@bandit:/tmp/git30$ cat README.md
+just an epmty file... muahaha
+
+bandit30@bandit:/tmp/git30$ git tag -l
+WARNING: terminal is not fully functional
+Press RETURN to continue
+secret
+
+bandit30@bandit:/tmp/git30$ git show secret
+WARNING: terminal is not fully functional
+Press RETURN to continue
+fb5S2xb7bRyFmAvQYQGEqsbhVyJqhnDy
+```
+
+## L32 push file
+This is pretty easy, Just notice the .gitignore file.
+
+```
+bandit31@bandit:~$ git clone ssh://bandit31-git@localhost:2220/home/bandit31-git/repo /tmp/git31/
+Cloning into '/tmp/git31'...
+
+bandit31@bandit:~$ cd /tmp/git31
+
+bandit31@bandit:/tmp/git31$ cat README.md
+This time your task is to push a file to the remote repository.
+
+Details:
+    File name: key.txt
+    Content: 'May I come in?'
+    Branch: master
+
+bandit31@bandit:/tmp/git31$ echo 'May I come in?' > key.txt
+bandit31@bandit:/tmp/git31$ echo "" > .gitignore
+bandit31@bandit:/tmp/git31$ git add .
+bandit31@bandit:/tmp/git31$ git commit -m "push file"
+
+bandit31@bandit:/tmp/git31$ git remote -v
+origin  ssh://bandit31-git@localhost:2220/home/bandit31-git/repo (fetch)
+origin  ssh://bandit31-git@localhost:2220/home/bandit31-git/repo (push)
+
+bandit31@bandit:/tmp/git31$ git push -u remote origin
+...
+Enumerating objects: 6, done.
+Counting objects: 100% (6/6), done.
+Delta compression using up to 2 threads
+Compressing objects: 100% (2/2), done.
+Writing objects: 100% (4/4), 331 bytes | 331.00 KiB/s, done.
+Total 4 (delta 0), reused 0 (delta 0), pack-reused 0
+remote: ### Attempting to validate files... ####
+remote:
+remote: .oOo.oOo.oOo.oOo.oOo.oOo.oOo.oOo.oOo.oOo.
+remote:
+remote: Well done! Here is the password for the next level:
+remote: 3O9RfhqyAlVBEZpVb6LYStshZoqoSx5K
+remote:
+remote: .oOo.oOo.oOo.oOo.oOo.oOo.oOo.oOo.oOo.oOo.
+remote:
+To ssh://localhost:2220/home/bandit31-git/repo
+ ! [remote rejected] master -> master (pre-receive hook declined)
+error: failed to push some refs to 'ssh://localhost:2220/home/bandit31-git/repo'
+```
+
+## L33 THE UPPERCASE SHELL
+
+Every command sent is in uppercase. It does seems that it is a special kind of shell `/home/bandit32/uppershell`
+```
+bandit31@bandit:~$ cat /etc/passwd | grep bandit32
+bandit32:x:11032:11032:bandit level 32:/home/bandit32:/home/bandit32/uppershell
+```
+
+Off the top of my head, the first thing coming to my mind that's not affected by this is the environment variables. 
+However, `$SHELL` will not work as it's already set to `/home/bandit32/uppershell` in `/etc/passwd`. 
+
+Next, we have special charaters like `#!@$` and numbers unaffected. It is hard not to think of positional arguments.
+
+E.g. `$?` is set to the exit status of the last command. 
+
+In Bash script, number postional arguments are important, too. 
+For command `./my_script.sh arg1 arg2`, `$0`, `$1`, `$2` will just be `./my_script.sh`, `arg1`, `arg2`. 
+`$0` is essentially the name/path of the executed script, and `$1` the first argument.
+
+Well, bash scripts are a little different from running commands directly in shell, but they are essentially cast from one mold, because in shell, every `cmd arg1 arg2 ...` is really just `/bin/bash cmd arg1 arg2`.
+
+So, `$0` in shell is just `/bin/bash`, and `$1` instead is the command itself `cmd`, and `$2` would be the next arg in line. 
+
+No matter what MOD version of shell bandit32 uses here, the bottom line is they must use **some shell** to execute his command. `$0` should work.
+
+``` bash
+>> $0
+$
+# now we are in ????
+$ echo $SHELL
+/home/bandit32/uppershell
+$ echo $0
+sh
+# we are in sh!
+$ cat /etc/bandit_pass/bandit33
+tQdtbs5D5i2vJwkO8mEyYEyTL8izoeJ0
+```
+
+## L34 TBC
+```
+bandit33@bandit:~$ cat README.txt
+Congratulations on solving the last level of this game!
+
+At this moment, there are no more levels to play in this game. However, we are constantly working
+on new levels and will most likely expand this game with more levels soon.
+Keep an eye out for an announcement on our usual communication channels!
+In the meantime, you could play some of our other wargames.
+
+If you have an idea for an awesome new level, please let us know!
+```
+
+As of Jan 8, 2024, this is the end of Bandit. Hooray!
